@@ -1,0 +1,1262 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    cluster.x-k8s.io/provider: infrastructure-vngcloud
+  name: capv-system
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: capv-system/capv-serving-cert
+    controller-gen.kubebuilder.io/version: v0.14.0
+  labels:
+    cluster.x-k8s.io/provider: infrastructure-vngcloud
+    cluster.x-k8s.io/v1beta1: v1alpha1
+  name: vngcloudclusters.infrastructure.cluster.x-k8s.io
+spec:
+  conversion:
+    strategy: Webhook
+    webhook:
+      clientConfig:
+        caBundle: Cg==
+        service:
+          name: capv-webhook-service
+          namespace: capv-system
+          path: /convert
+      conversionReviewVersions:
+      - v1
+      - v1beta1
+  group: infrastructure.cluster.x-k8s.io
+  names:
+    categories:
+    - cluster-api
+    kind: VngCloudCluster
+    listKind: VngCloudClusterList
+    plural: vngcloudclusters
+    shortNames:
+    - vcc
+    singular: vngcloudcluster
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Cluster to which this VngCloudCluster belongs
+      jsonPath: .metadata.labels.cluster\.x-k8s\.io/cluster-name
+      name: Cluster
+      type: string
+    - description: Cluster infrastructure is ready for VngCloud instances
+      jsonPath: .status.ready
+      name: Ready
+      type: string
+    - description: Network the cluster is using
+      jsonPath: .status.network.id
+      name: Network
+      type: string
+    - description: API Endpoint
+      jsonPath: .spec.controlPlaneEndpoint.host
+      name: Endpoint
+      priority: 1
+      type: string
+    - description: Bastion address for breakglass access
+      jsonPath: .status.bastion.floatingIP
+      name: Bastion IP
+      type: string
+    - description: Time duration since creation of VngCloudCluster
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: VngCloudCluster is the Schema for the vngcloudclusters API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VngCloudClusterSpec defines the desired state of VngCloudCluster
+            properties:
+              apiServerFixedIP:
+                description: |-
+                  APIServerFixedIP is the fixed IP which will be associated with the API server.
+                  In the case where the API server has a floating IP but not a managed load balancer,
+                  this field is not used.
+                  If a managed load balancer is used and this field is not specified, a fixed IP will
+                  be dynamically allocated for the load balancer.
+                  If a managed load balancer is not used AND the API server floating IP is disabled,
+                  this field MUST be specified and should correspond to a pre-allocated port that
+                  holds the fixed IP to be used as a VIP.
+                type: string
+              apiServerPort:
+                description: |-
+                  APIServerPort is the port on which the listener on the APIServer
+                  will be created
+                type: integer
+              cloudName:
+                description: The name of the clouds to use from the cloud secret
+                type: string
+              controlPlaneEndpoint:
+                description: ControlPlaneEndpoint represents the endpoint used to
+                  communicate with the control plane.
+                properties:
+                  host:
+                    description: The hostname on which the API server is serving.
+                    type: string
+                  port:
+                    description: The port on which the API server is serving.
+                    format: int32
+                    type: integer
+                required:
+                - host
+                - port
+                type: object
+              identityRef:
+                description: IdentityRef is a reference to an identity to be used
+                  when reconciling this cluster
+                properties:
+                  kind:
+                    description: |-
+                      Kind of the identity. Must be supported by the infrastructure
+                      provider and may be either cluster or namespace-scoped.
+                    minLength: 1
+                    type: string
+                  name:
+                    description: |-
+                      Name of the infrastructure identity to be used.
+                      Must be either a cluster-scoped resource, or namespaced-scoped
+                      resource the same namespace as the resource(s) being provisioned.
+                    type: string
+                required:
+                - kind
+                - name
+                type: object
+            required:
+            - cloudName
+            type: object
+          status:
+            description: VngCloudClusterStatus defines the observed state of VngCloudCluster
+            properties:
+              controlPlaneEndpoint:
+                description: ControlPlaneEndpoint represents the endpoint used to
+                  communicate with the control plane.
+                properties:
+                  host:
+                    description: The hostname on which the API server is serving.
+                    type: string
+                  port:
+                    description: The port on which the API server is serving.
+                    format: int32
+                    type: integer
+                required:
+                - host
+                - port
+                type: object
+              failureMessage:
+                description: |-
+                  FailureMessage will be set in the event that there is a terminal problem
+                  reconciling the VngCloudCluster and will contain a more verbose string suitable
+                  for logging and human consumption.
+
+
+                  This field should not be set for transitive errors that a controller
+                  faces that are expected to be fixed automatically over
+                  time (like service outages), but instead indicate that something is
+                  fundamentally wrong with the VngCloudCluster's spec or the configuration of
+                  the controller, and that manual intervention is required. Examples
+                  of terminal errors would be invalid combinations of settings in the
+                  spec, values that are unsupported by the controller, or the
+                  responsible controller itself being critically misconfigured.
+
+
+                  Any transient errors that occur during the reconciliation of
+                  VngCloudClusters can be added as events to the VngCloudCluster object
+                  and/or logged in the controller's output.
+                type: string
+              failureReason:
+                description: |-
+                  FailureReason will be set in the event that there is a terminal problem
+                  reconciling the VngCloudCluster and will contain a succinct value suitable
+                  for machine interpretation.
+
+
+                  This field should not be set for transitive errors that a controller
+                  faces that are expected to be fixed automatically over
+                  time (like service outages), but instead indicate that something is
+                  fundamentally wrong with the VngCloudCluster's spec or the configuration of
+                  the controller, and that manual intervention is required. Examples
+                  of terminal errors would be invalid combinations of settings in the
+                  spec, values that are unsupported by the controller, or the
+                  responsible controller itself being critically misconfigured.
+
+
+                  Any transient errors that occur during the reconciliation of
+                  VngCloudClusters can be added as events to the VngCloudCluster object
+                  and/or logged in the controller's output.
+                type: string
+              network:
+                description: Network contains information about the created VngCloud
+                  Network.
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  subnets:
+                    description: Subnets is a list of subnets associated with the
+                      default cluster network. Machines which use the default cluster
+                      network will get an address from all of these subnets.
+                    items:
+                      description: Subnet represents basic information about the associated
+                        OpenStack Neutron Subnet.
+                      properties:
+                        cidr:
+                          type: string
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        tags:
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - cidr
+                      - id
+                      - name
+                      type: object
+                    type: array
+                  tags:
+                    items:
+                      type: string
+                    type: array
+                required:
+                - id
+                - name
+                type: object
+              ready:
+                type: boolean
+              workerSecurityGroup:
+                description: |-
+                  WorkerSecurityGroup contains all the information about the OpenStack Security
+                  Group that needs to be applied to worker nodes.
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  rules:
+                    items:
+                      description: |-
+                        SecurityGroupRule represent the basic information of the associated OpenStack
+                        Security Group Role.
+                      properties:
+                        description:
+                          type: string
+                        direction:
+                          type: string
+                        etherType:
+                          type: string
+                        name:
+                          type: string
+                        portRangeMax:
+                          type: integer
+                        portRangeMin:
+                          type: integer
+                        protocol:
+                          type: string
+                        remoteIPPrefix:
+                          type: string
+                        securityGroupID:
+                          type: string
+                      required:
+                      - description
+                      - direction
+                      - etherType
+                      - name
+                      - portRangeMax
+                      - portRangeMin
+                      - protocol
+                      - remoteIPPrefix
+                      - securityGroupID
+                      type: object
+                    type: array
+                required:
+                - id
+                - name
+                - rules
+                type: object
+            required:
+            - ready
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: capv-system/capv-serving-cert
+    controller-gen.kubebuilder.io/version: v0.14.0
+  labels:
+    cluster.x-k8s.io/provider: infrastructure-vngcloud
+    cluster.x-k8s.io/v1beta1: v1alpha1
+  name: vngcloudclustertemplates.infrastructure.cluster.x-k8s.io
+spec:
+  conversion:
+    strategy: Webhook
+    webhook:
+      clientConfig:
+        caBundle: Cg==
+        service:
+          name: capv-webhook-service
+          namespace: capv-system
+          path: /convert
+      conversionReviewVersions:
+      - v1
+      - v1beta1
+  group: infrastructure.cluster.x-k8s.io
+  names:
+    categories:
+    - cluster-api
+    kind: VngCloudClusterTemplate
+    listKind: VngCloudClusterTemplateList
+    plural: vngcloudclustertemplates
+    shortNames:
+    - vcct
+    singular: vngcloudclustertemplate
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: VngCloudClusterTemplate is the Schema for the vngcloudclustertemplates
+          API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VngCloudClusterTemplateSpec defines the desired state of
+              VngCloudClusterTemplate.
+            properties:
+              template:
+                description: VngCloudClusterTemplateResource describes the data needed
+                  to create a VngCloudCluster from a template.
+                properties:
+                  spec:
+                    description: VngCloudClusterSpec defines the desired state of
+                      VngCloudCluster
+                    properties:
+                      apiServerFixedIP:
+                        description: |-
+                          APIServerFixedIP is the fixed IP which will be associated with the API server.
+                          In the case where the API server has a floating IP but not a managed load balancer,
+                          this field is not used.
+                          If a managed load balancer is used and this field is not specified, a fixed IP will
+                          be dynamically allocated for the load balancer.
+                          If a managed load balancer is not used AND the API server floating IP is disabled,
+                          this field MUST be specified and should correspond to a pre-allocated port that
+                          holds the fixed IP to be used as a VIP.
+                        type: string
+                      apiServerPort:
+                        description: |-
+                          APIServerPort is the port on which the listener on the APIServer
+                          will be created
+                        type: integer
+                      cloudName:
+                        description: The name of the clouds to use from the cloud
+                          secret
+                        type: string
+                      controlPlaneEndpoint:
+                        description: ControlPlaneEndpoint represents the endpoint
+                          used to communicate with the control plane.
+                        properties:
+                          host:
+                            description: The hostname on which the API server is serving.
+                            type: string
+                          port:
+                            description: The port on which the API server is serving.
+                            format: int32
+                            type: integer
+                        required:
+                        - host
+                        - port
+                        type: object
+                      identityRef:
+                        description: IdentityRef is a reference to an identity to
+                          be used when reconciling this cluster
+                        properties:
+                          kind:
+                            description: |-
+                              Kind of the identity. Must be supported by the infrastructure
+                              provider and may be either cluster or namespace-scoped.
+                            minLength: 1
+                            type: string
+                          name:
+                            description: |-
+                              Name of the infrastructure identity to be used.
+                              Must be either a cluster-scoped resource, or namespaced-scoped
+                              resource the same namespace as the resource(s) being provisioned.
+                            type: string
+                        required:
+                        - kind
+                        - name
+                        type: object
+                    required:
+                    - cloudName
+                    type: object
+                required:
+                - spec
+                type: object
+            required:
+            - template
+            type: object
+        type: object
+    served: true
+    storage: true
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: capv-system/capv-serving-cert
+    controller-gen.kubebuilder.io/version: v0.14.0
+  labels:
+    cluster.x-k8s.io/provider: infrastructure-vngcloud
+    cluster.x-k8s.io/v1beta1: v1alpha1
+  name: vngcloudmachines.infrastructure.cluster.x-k8s.io
+spec:
+  conversion:
+    strategy: Webhook
+    webhook:
+      clientConfig:
+        caBundle: Cg==
+        service:
+          name: capv-webhook-service
+          namespace: capv-system
+          path: /convert
+      conversionReviewVersions:
+      - v1
+      - v1beta1
+  group: infrastructure.cluster.x-k8s.io
+  names:
+    categories:
+    - cluster-api
+    kind: VngCloudMachine
+    listKind: VngCloudMachineList
+    plural: vngcloudmachines
+    shortNames:
+    - vcm
+    singular: vngcloudmachine
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Cluster to which this VngCloudMachine belongs
+      jsonPath: .metadata.labels.cluster\.x-k8s\.io/cluster-name
+      name: Cluster
+      type: string
+    - description: VngCloud instance state
+      jsonPath: .status.instanceState
+      name: InstanceState
+      type: string
+    - description: Machine ready status
+      jsonPath: .status.ready
+      name: Ready
+      type: string
+    - description: VngCloud instance ID
+      jsonPath: .spec.providerID
+      name: ProviderID
+      type: string
+    - description: Machine object which owns with this VngCloudMachine
+      jsonPath: .metadata.ownerReferences[?(@.kind=="Machine")].name
+      name: Machine
+      type: string
+    - description: Time duration since creation of VngCloudMachine
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: VngCloudMachine is the Schema for the openstackmachines API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VngCloudMachineSpec defines the desired state of VngCloudMachine.
+            properties:
+              cloudName:
+                description: The name of the cloud to use from the clouds secret.
+                type: string
+              disableFloatingIP:
+                description: True if the instance is created without floating IP attach
+                  to it.
+                type: boolean
+              flavorID:
+                description: The flavor reference for the flavor for your server instance.
+                type: string
+              identityRef:
+                description: IdentityRef is a reference to an identity to be used
+                  when reconciling this cluster.
+                properties:
+                  kind:
+                    description: |-
+                      Kind of the identity. Must be supported by the infrastructure
+                      provider and may be either cluster or namespace-scoped.
+                    minLength: 1
+                    type: string
+                  name:
+                    description: |-
+                      Name of the infrastructure identity to be used.
+                      Must be either a cluster-scoped resource, or namespaced-scoped
+                      resource the same namespace as the resource(s) being provisioned.
+                    type: string
+                required:
+                - kind
+                - name
+                type: object
+              imageID:
+                description: |-
+                  The image to use for your server instance.
+                  If the rootVolume is specified, this will be used when creating the root volume.
+                type: string
+              instanceID:
+                description: InstanceID is the VngCloud instance ID for this machine.
+                type: string
+              networkID:
+                description: The network ID
+                type: string
+              providerID:
+                description: ProviderID is the unique identifier as specified by the
+                  cloud provider, this field is used by the ClusterAPI.
+                type: string
+              rootDiskSize:
+                description: The volume size to use for the root volume.
+                type: integer
+              rootDiskTypeID:
+                description: The volume type ID to use for the root volume.
+                type: string
+              securityGroups:
+                description: The names of the security groups to assign to the instance.
+                items:
+                  properties:
+                    id:
+                      description: The ID of the security group to use for this nodegroup
+                      type: string
+                  type: object
+                type: array
+              sshKeyID:
+                description: The ssh key to inject in the instance.
+                type: string
+              subnetID:
+                description: The subnet to launch the server instance in.
+                type: string
+            required:
+            - flavorID
+            - networkID
+            - subnetID
+            type: object
+          status:
+            properties:
+              addresses:
+                description: Addresses contains the VngCloud instance associated addresses.
+                items:
+                  description: NodeAddress contains information for the node's address.
+                  properties:
+                    address:
+                      description: The node address.
+                      type: string
+                    type:
+                      description: Node address type, one of Hostname, ExternalIP
+                        or InternalIP.
+                      type: string
+                  required:
+                  - address
+                  - type
+                  type: object
+                type: array
+              conditions:
+                description: Conditions provide observations of the operational state
+                  of a Cluster API resource.
+                items:
+                  description: Condition defines an observation of a Cluster API resource
+                    operational state.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        Last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed. If that is not known, then using the time when
+                        the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        A human readable message indicating details about the transition.
+                        This field may be empty.
+                      type: string
+                    reason:
+                      description: |-
+                        The reason for the condition's last transition in CamelCase.
+                        The specific API may choose whether or not this field is considered a guaranteed API.
+                        This field may not be empty.
+                      type: string
+                    severity:
+                      description: |-
+                        Severity provides an explicit classification of Reason code, so the users or machines can immediately
+                        understand the current situation and act accordingly.
+                        The Severity field MUST be set only when Status=False.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: |-
+                        Type of condition in CamelCase or in foo.example.com/CamelCase.
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
+                        can be useful (see .node.status.conditions), the ability to deconflict is important.
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - status
+                  - type
+                  type: object
+                type: array
+              failureMessage:
+                description: |-
+                  FailureMessage will be set in the event that there is a terminal problem
+                  reconciling the Machine and will contain a more verbose string suitable
+                  for logging and human consumption.
+
+
+                  This field should not be set for transitive errors that a controller
+                  faces that are expected to be fixed automatically over
+                  time (like service outages), but instead indicate that something is
+                  fundamentally wrong with the Machine's spec or the configuration of
+                  the controller, and that manual intervention is required. Examples
+                  of terminal errors would be invalid combinations of settings in the
+                  spec, values that are unsupported by the controller, or the
+                  responsible controller itself being critically misconfigured.
+
+
+                  Any transient errors that occur during the reconciliation of Machines
+                  can be added as events to the Machine object and/or logged in the
+                  controller's output.
+                type: string
+              failureReason:
+                description: MachineStatusError defines errors states for Machine
+                  objects.
+                type: string
+              instanceState:
+                description: InstanceState is the state of the VngCloud instance for
+                  this machine.
+                type: string
+              ready:
+                description: Ready is true when the provider resource is ready.
+                type: boolean
+              referencedResources:
+                description: ReferencedResources contains resolved references to resources
+                  that the machine depends on.
+                properties:
+                  imageID:
+                    description: ImageID is the ID of the image to use for the machine
+                      and is calculated based on ImageFilter.
+                    type: string
+                  serverGroupID:
+                    description: ServerGroupID is the ID of the server group the machine
+                      should be added to and is calculated based on ServerGroupFilter.
+                    type: string
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: capv-system/capv-serving-cert
+    controller-gen.kubebuilder.io/version: v0.14.0
+  labels:
+    cluster.x-k8s.io/provider: infrastructure-vngcloud
+    cluster.x-k8s.io/v1beta1: v1alpha1
+  name: vngcloudmachinetemplates.infrastructure.cluster.x-k8s.io
+spec:
+  conversion:
+    strategy: Webhook
+    webhook:
+      clientConfig:
+        caBundle: Cg==
+        service:
+          name: capv-webhook-service
+          namespace: capv-system
+          path: /convert
+      conversionReviewVersions:
+      - v1
+      - v1beta1
+  group: infrastructure.cluster.x-k8s.io
+  names:
+    categories:
+    - cluster-api
+    kind: VngCloudMachineTemplate
+    listKind: VngCloudMachineTemplateList
+    plural: vngcloudmachinetemplates
+    shortNames:
+    - vcmt
+    singular: vngcloudmachinetemplate
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VngCloudMachineTemplateSpec defines the desired state of
+              VngCloudMachineTemplate.
+            properties:
+              template:
+                description: VngCloudMachineTemplateResource describes the data needed
+                  to create a VngCloudMachine from a template.
+                properties:
+                  spec:
+                    description: Spec is the specification of the desired behavior
+                      of the machine.
+                    properties:
+                      cloudName:
+                        description: The name of the cloud to use from the clouds
+                          secret.
+                        type: string
+                      disableFloatingIP:
+                        description: True if the instance is created without floating
+                          IP attach to it.
+                        type: boolean
+                      flavorID:
+                        description: The flavor reference for the flavor for your
+                          server instance.
+                        type: string
+                      identityRef:
+                        description: IdentityRef is a reference to an identity to
+                          be used when reconciling this cluster.
+                        properties:
+                          kind:
+                            description: |-
+                              Kind of the identity. Must be supported by the infrastructure
+                              provider and may be either cluster or namespace-scoped.
+                            minLength: 1
+                            type: string
+                          name:
+                            description: |-
+                              Name of the infrastructure identity to be used.
+                              Must be either a cluster-scoped resource, or namespaced-scoped
+                              resource the same namespace as the resource(s) being provisioned.
+                            type: string
+                        required:
+                        - kind
+                        - name
+                        type: object
+                      imageID:
+                        description: |-
+                          The image to use for your server instance.
+                          If the rootVolume is specified, this will be used when creating the root volume.
+                        type: string
+                      instanceID:
+                        description: InstanceID is the VngCloud instance ID for this
+                          machine.
+                        type: string
+                      networkID:
+                        description: The network ID
+                        type: string
+                      providerID:
+                        description: ProviderID is the unique identifier as specified
+                          by the cloud provider, this field is used by the ClusterAPI.
+                        type: string
+                      rootDiskSize:
+                        description: The volume size to use for the root volume.
+                        type: integer
+                      rootDiskTypeID:
+                        description: The volume type ID to use for the root volume.
+                        type: string
+                      securityGroups:
+                        description: The names of the security groups to assign to
+                          the instance.
+                        items:
+                          properties:
+                            id:
+                              description: The ID of the security group to use for
+                                this nodegroup
+                              type: string
+                          type: object
+                        type: array
+                      sshKeyID:
+                        description: The ssh key to inject in the instance.
+                        type: string
+                      subnetID:
+                        description: The subnet to launch the server instance in.
+                        type: string
+                    required:
+                    - flavorID
+                    - networkID
+                    - subnetID
+                    type: object
+                required:
+                - spec
+                type: object
+            required:
+            - template
+            type: object
+        type: object
+    served: true
+    storage: true
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    cluster.x-k8s.io/provider: infrastructure-vngcloud
+  name: capv-manager
+  namespace: capv-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    cluster.x-k8s.io/provider: infrastructure-vngcloud
+  name: capv-leader-election-role
+  namespace: capv-system
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - configmaps/status
+  verbs:
+  - get
+  - update
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    cluster.x-k8s.io/provider: infrastructure-vngcloud
+  name: capv-manager-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+- apiGroups:
+  - cluster.x-k8s.io
+  resources:
+  - clusters
+  - clusters/status
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - cluster.x-k8s.io
+  resources:
+  - machines
+  - machines/status
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - vngcloudclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - vngcloudclusters/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - vngcloudmachines
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - vngcloudmachines/status
+  verbs:
+  - get
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    cluster.x-k8s.io/provider: infrastructure-vngcloud
+  name: capv-leader-election-rolebinding
+  namespace: capv-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: capv-leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: capv-manager
+  namespace: capv-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    cluster.x-k8s.io/provider: infrastructure-vngcloud
+  name: capv-manager-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: capv-manager-role
+subjects:
+- kind: ServiceAccount
+  name: capv-manager
+  namespace: capv-system
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    cluster.x-k8s.io/provider: infrastructure-vngcloud
+  name: capv-webhook-service
+  namespace: capv-system
+spec:
+  ports:
+  - port: 443
+    targetPort: webhook-server
+  selector:
+    cluster.x-k8s.io/provider: infrastructure-vngcloud
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    cluster.x-k8s.io/provider: infrastructure-vngcloud
+    control-plane: capv-controller-manager
+  name: capv-controller-manager
+  namespace: capv-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      cluster.x-k8s.io/provider: infrastructure-vngcloud
+      control-plane: capv-controller-manager
+  template:
+    metadata:
+      labels:
+        cluster.x-k8s.io/provider: infrastructure-vngcloud
+        control-plane: capv-controller-manager
+    spec:
+      containers:
+      - args:
+        - --leader-elect
+        - --v=5
+        - --metrics-bind-addr=127.0.0.1:8080
+        - --vngcloud-system-config-file=/etc/vngcloud/system-config.conf
+        command:
+        - /manager
+        image: vcr.vngcloud.vn/81-vks-public/capi-vngcloud-controller:dev
+        imagePullPolicy: Always
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: healthz
+        name: manager
+        ports:
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
+        - containerPort: 9440
+          name: healthz
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: healthz
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          runAsGroup: 65532
+          runAsUser: 65532
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: cert
+          readOnly: true
+        - mountPath: /etc/vngcloud
+          name: system-config
+          readOnly: true
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: capv-manager
+      terminationGracePeriodSeconds: 10
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/control-plane
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: capv-webhook-service-cert
+      - name: system-config
+        secret:
+          secretName: system-config
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    cluster.x-k8s.io/provider: infrastructure-vngcloud
+  name: capv-serving-cert
+  namespace: capv-system
+spec:
+  dnsNames:
+  - capv-webhook-service.capv-system.svc
+  - capv-webhook-service.capv-system.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: capv-selfsigned-issuer
+  secretName: capv-webhook-service-cert
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  labels:
+    cluster.x-k8s.io/provider: infrastructure-vngcloud
+  name: capv-selfsigned-issuer
+  namespace: capv-system
+spec:
+  selfSigned: {}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: capv-system/capv-serving-cert
+  labels:
+    cluster.x-k8s.io/provider: infrastructure-vngcloud
+  name: capv-mutating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1beta1
+  clientConfig:
+    service:
+      name: capv-webhook-service
+      namespace: capv-system
+      path: /mutate-infrastructure-cluster-x-k8s-io-v1alpha1-vngcloudcluster
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: default.vngcloudcluster.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - vngcloudclusters
+  sideEffects: None
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: capv-system/capv-serving-cert
+  labels:
+    cluster.x-k8s.io/provider: infrastructure-vngcloud
+  name: capv-validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1beta1
+  clientConfig:
+    service:
+      name: capv-webhook-service
+      namespace: capv-system
+      path: /validate-infrastructure-cluster-x-k8s-io-v1alpha1-vngcloudcluster
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: validation.vngcloudcluster.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - vngcloudclusters
+  sideEffects: None
+- admissionReviewVersions:
+  - v1beta1
+  clientConfig:
+    service:
+      name: capv-webhook-service
+      namespace: capv-system
+      path: /validate-infrastructure-cluster-x-k8s-io-v1alpha1-vngcloudmachinetemplate
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: validation.vngcloudmachinetemplate.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - vngcloudmachinetemplates
+  sideEffects: None
