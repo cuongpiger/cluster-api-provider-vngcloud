@@ -573,6 +573,10 @@ spec:
               networkID:
                 description: The network ID
                 type: string
+              nodeGroupName:
+                description: NodeGroupName is the prefix name for the entire instances
+                  in this nodegroup.
+                type: string
               providerID:
                 description: ProviderID is the unique identifier as specified by the
                   cloud provider, this field is used by the ClusterAPI.
@@ -601,6 +605,7 @@ spec:
             required:
             - flavorID
             - networkID
+            - nodeGroupName
             - subnetID
             type: object
           status:
@@ -693,9 +698,15 @@ spec:
                 description: MachineStatusError defines errors states for Machine
                   objects.
                 type: string
+              imageID:
+                description: The current OS image ID used for the instance.
+                type: string
               instanceState:
                 description: InstanceState is the state of the VngCloud instance for
                   this machine.
+                type: string
+              nodeName:
+                description: The generated instance name.
                 type: string
               ready:
                 description: Ready is true when the provider resource is ready.
@@ -832,6 +843,10 @@ spec:
                       networkID:
                         description: The network ID
                         type: string
+                      nodeGroupName:
+                        description: NodeGroupName is the prefix name for the entire
+                          instances in this nodegroup.
+                        type: string
                       providerID:
                         description: ProviderID is the unique identifier as specified
                           by the cloud provider, this field is used by the ClusterAPI.
@@ -862,6 +877,7 @@ spec:
                     required:
                     - flavorID
                     - networkID
+                    - nodeGroupName
                     - subnetID
                     type: object
                 required:
