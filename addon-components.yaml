@@ -1125,7 +1125,7 @@ spec:
         - --insecure-diagnostics=${CAAPH_INSECURE_DIAGNOSTICS:=false}
         - --v=2
         # image: registry.k8s.io/cluster-api-helm/cluster-api-helm-controller:v0.1.1-alpha.1
-        image: vcr.vngcloud.vn/60108-cuongdm3/cluster-api-helm-controller:dev
+        image: vcr.vngcloud.vn/60108-cuongdm3/cluster-api-helm-controller:v0.0.4
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
