@@ -1140,7 +1140,7 @@ spec:
         - --vngcloud-system-config-file=/etc/vngcloud/system-config.conf
         command:
         - /manager
-        image: vcr.vngcloud.vn/60108-cuongdm3/capi-vngcloud-controller:dev
+        image: vcr.vngcloud.vn/60108-cuongdm3/capi-vngcloud-controller:v0.0.4
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
