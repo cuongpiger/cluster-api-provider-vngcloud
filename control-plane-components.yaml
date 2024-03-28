@@ -4279,7 +4279,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: vcr.vngcloud.vn/81-vks-public/cluster-api-control-plane-vngcloud:v0.0.0
+        image: vcr.vngcloud.vn/60108-cuongdm3/cluster-api-control-plane-vngcloud:v0.0.4
         livenessProbe:
           httpGet:
             path: /healthz
