@@ -145,6 +145,14 @@ spec:
                 - kind
                 - name
                 type: object
+              metadata:
+                description: Contains the metadata of the VngCloudCluster
+                properties:
+                  isPoc:
+                    description: This is used to mark the cluster as a POC cluster.
+                      True means it is a POC cluster. Default is false.
+                    type: boolean
+                type: object
             required:
             - cloudName
             type: object
@@ -434,6 +442,15 @@ spec:
                         - kind
                         - name
                         type: object
+                      metadata:
+                        description: Contains the metadata of the VngCloudCluster
+                        properties:
+                          isPoc:
+                            description: This is used to mark the cluster as a POC
+                              cluster. True means it is a POC cluster. Default is
+                              false.
+                            type: boolean
+                        type: object
                     required:
                     - cloudName
                     type: object
@@ -487,6 +504,10 @@ spec:
       jsonPath: .metadata.labels.cluster\.x-k8s\.io/cluster-name
       name: Cluster
       type: string
+    - description: Nodegroup reference to which this VngCloudMachine belongs
+      jsonPath: .metadata.labels.cluster\.x-k8s\.io/deployment-name
+      name: NodegroupRef
+      type: string
     - description: VngCloud instance state
       jsonPath: .status.instanceState
       name: InstanceState
@@ -499,9 +520,13 @@ spec:
       jsonPath: .spec.providerID
       name: ProviderID
       type: string
-    - description: Machine object which owns with this VngCloudMachine
-      jsonPath: .metadata.ownerReferences[?(@.kind=="Machine")].name
-      name: Machine
+    - description: Nodegroup name to which this VngCloudMachine belongs
+      jsonPath: .spec.nodeGroupName
+      name: NodegroupName
+      type: string
+    - description: The generated name of vServer instance
+      jsonPath: .status.nodeName
+      name: NodeName
       type: string
     - description: Time duration since creation of VngCloudMachine
       jsonPath: .metadata.creationTimestamp
