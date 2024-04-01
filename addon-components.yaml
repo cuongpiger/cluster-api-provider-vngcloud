@@ -1128,8 +1128,8 @@ spec:
         - --leader-elect
         - --diagnostics-address=${CAAPH_DIAGNOSTICS_ADDRESS:=:8443}
         - --insecure-diagnostics=${CAAPH_INSECURE_DIAGNOSTICS:=false}
-        - --v=2
-        image: vcr.vngcloud.vn/60108-cuongdm3/cluster-api-helm-controller-amd64:dev
+        - --v=5
+        image: vcr.vngcloud.vn/60108-cuongdm3/cluster-api-helm-controller:v0.0.5.3
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
