@@ -273,6 +273,11 @@ spec:
                       after a Helm install/upgrade has been performed.
                     type: boolean
                 type: object
+              referenceServiceAccount:
+                description: |-
+                  ReferenceServiceAccount indicates whether the Helm chart should be installed using the service account of the HelmChartProxy.
+                  If it is not specified, the Helm chart will be installed using the service account of the workload Cluster.
+                type: boolean
               releaseName:
                 description: ReleaseName is the release name of the installed Helm
                   chart. If it is not specified, a name will be generated.
@@ -1124,8 +1129,7 @@ spec:
         - --diagnostics-address=${CAAPH_DIAGNOSTICS_ADDRESS:=:8443}
         - --insecure-diagnostics=${CAAPH_INSECURE_DIAGNOSTICS:=false}
         - --v=2
-        # image: registry.k8s.io/cluster-api-helm/cluster-api-helm-controller:v0.1.1-alpha.1
-        image: vcr.vngcloud.vn/60108-cuongdm3/cluster-api-helm-controller:v0.0.4
+        image: vcr.vngcloud.vn/60108-cuongdm3/cluster-api-helm-controller-amd64:dev
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
